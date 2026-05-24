@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Enterprise USB Data Loss Prevention & Insider Threat Detection Platform. Real-time monitoring, risk scoring, and forensic analysis.">
+    <title>USB DLP &mdash; Insider Threat Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+
+<body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">🛡️</div>
+            <div class="brand-text">
+                <h2>USB DLP</h2>
+                <span>Threat Intelligence</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-label">Core</div>
+            <ul>
+                <li><a href="#top" class="active" data-section="top">
+                    <span class="nav-icon">📊</span><span>Dashboard</span>
+                </a></li>
+                <li><a href="#alerts" data-section="alerts">
+                    <span class="nav-icon">🚨</span><span>Security Alerts</span>
+                </a></li>
+                <li><a href="#heatmap" data-section="heatmap">
+                    <span class="nav-icon">🔥</span><span>Risk Heatmap</span>
+                </a></li>
+            </ul>
+
+            <div class="nav-label">Forensics</div>
+            <ul>
+                <li><a href="#timeline" data-section="timeline">
+                    <span class="nav-icon">🕒</span><span>Timeline View</span>
+                </a></li>
+                <li><a href="#trust" data-section="trust">
+                    <span class="nav-icon">✅</span><span>Device Trust</span>
+                </a></li>
+            </ul>
+
+            <div class="nav-label">Logs</div>
+            <ul>
+                <li><a href="#activity" data-section="activity">
+                    <span class="nav-icon">📁</span><span>File Activity</span>
+                </a></li>
+                <li><a href="#devices" data-section="devices">
+                    <span class="nav-icon">🔌</span><span>USB Devices</span>
+                </a></li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-actions">
+                <button class="btn-simulate" id="btnSimulate" onclick="simulateAttack()">
+                    💀 Simulate Attack
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content" id="top">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Threat Overview</h1>
+            <div class="header-status">
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Switch theme">
+                    <span id="themeIcon">🌙</span>
+                    <div class="toggle-track">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                    <span id="themeLabel">Dark</span>
+                </button>
+                <div class="live-badge" id="connectionStatus">
+                    <span class="pulse"></span>
+                    <span>Live Monitoring</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stats-grid">
+            <div class="stat-card connections">
+                <div class="stat-icon">🔌</div>
+                <div class="stat-label">USB Connections</div>
+                <div class="stat-value" id="stat-connections">0</div>
+            </div>
+            <div class="stat-card files">
+                <div class="stat-icon">📁</div>
+                <div class="stat-label">Files Intercepted</div>
+                <div class="stat-value" id="stat-files">0</div>
+            </div>
+            <div class="stat-card alerts">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-label">Total Alerts</div>
+                <div class="stat-value" id="stat-alerts">0</div>
+            </div>
+            <div class="stat-card risk">
+                <div class="stat-icon">📈</div>
+                <div class="stat-label">Avg Risk Score</div>
+                <div class="stat-value" id="stat-avgrisk">—</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-panel">
+                <h3><span>📈</span> File Transfers (7 Days)</h3>
+                <div class="chart-canvas-wrapper"><canvas id="filesChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3><span>🚨</span> Alert Frequency</h3>
+                <div class="chart-canvas-wrapper"><canvas id="alertsChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3><span>🎯</span> Risk Distribution</h3>
+                <div class="chart-canvas-wrapper"><canvas id="riskScoreChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Risk Heatmap -->
+        <section id="heatmap" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">🔥</span> Hourly Risk Heatmap</h2>
+            </div>
+            <div class="heatmap-wrapper">
+                <div class="heatmap-container" id="heatmap-container"></div>
+                <div class="heatmap-legend">
+                    <span><span class="dot" style="background: var(--bg-card-hover)"></span> No Data</span>
+                    <span><span class="dot" style="background: #22c55e"></span> Low</span>
+                    <span><span class="dot" style="background: #f59e0b"></span> Medium</span>
+                    <span><span class="dot" style="background: #ef4444"></span> High</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Alerts -->
+        <section id="alerts" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">🚨</span> Security Alerts</h2>
+                <span class="count-badge" id="alert-badge">0</span>
+            </div>
+            <div class="panel-body">
+                <table id="table-alerts">
+                    <thead>
+                        <tr><th>Timestamp</th><th>User</th><th>Device</th><th>Risk</th><th>Severity</th><th>Reason</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🛡️</div><p>No alerts detected — system secure</p></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Device Trust -->
+        <section id="trust" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">✅</span> USB Device Trust</h2>
+            </div>
+            <div class="panel-body">
+                <table id="table-trust">
+                    <thead>
+                        <tr><th>Device ID</th><th>First Seen</th><th>Trust Score</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🔌</div><p>No USB devices registered</p></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Forensic Timeline -->
+        <section id="timeline" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">🕒</span> Forensic Timeline</h2>
+            </div>
+            <div class="panel-body">
+                <ul id="timeline-list" class="timeline-list">
+                    <li><div class="empty-state"><div class="empty-icon">🕒</div><p>No events recorded yet</p></div></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- File Activity -->
+        <section id="activity" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">📁</span> File Activity Log</h2>
+            </div>
+            <div class="panel-body">
+                <table id="table-activity">
+                    <thead>
+                        <tr><th>Time</th><th>User</th><th>File Name</th><th>Size</th><th>SHA-256</th><th>Speed</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📁</div><p>No file transfers logged</p></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- USB Hardware Logs -->
+        <section id="devices" class="panel">
+            <div class="panel-header">
+                <h2><span class="icon">🔌</span> Hardware Connection Log</h2>
+            </div>
+            <div class="panel-body">
+                <table id="table-devices">
+                    <thead>
+                        <tr><th>Device ID</th><th>Vendor</th><th>User</th><th>Connect Time</th><th>Mount Path</th><th>Whitelisted</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🔌</div><p>No USB connections detected</p></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Dashboard Logic -->
+    <script src="/static/charts.js"></script>
+
+    <!-- Theme Toggle, WebSocket & Simulate -->
+    <script>
+        // ─── THEME TOGGLE ───
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('dlp-theme', next);
+            updateThemeUI(next);
+            // Re-render charts with new theme colors
+            if (window.reloadCharts) window.reloadCharts();
+        }
+
+        function updateThemeUI(theme) {
+            document.getElementById('themeIcon').textContent = theme === 'dark' ? '🌙' : '☀️';
+            document.getElementById('themeLabel').textContent = theme === 'dark' ? 'Dark' : 'Light';
+        }
+
+        // Restore saved theme
+        (function() {
+            const saved = localStorage.getItem('dlp-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeUI(saved);
+        })();
+
+        // ─── NAVIGATION ───
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', function () {
+                document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // ─── WEBSOCKET ───
+        const socket = io();
+
+        socket.on('connect', () => {
+            const el = document.getElementById('connectionStatus');
+            el.className = 'live-badge';
+            el.innerHTML = '<span class="pulse"></span><span>Live Monitoring</span>';
+        });
+
+        socket.on('disconnect', () => {
+            const el = document.getElementById('connectionStatus');
+            el.className = 'live-badge disconnected';
+            el.innerHTML = '<span class="pulse"></span><span>Disconnected</span>';
+        });
+
+        socket.on('new_alert', (alert) => {
+            showToast(alert);
+            setTimeout(() => {
+                if (window.loadAlerts) window.loadAlerts();
+                if (window.loadStats) window.loadStats();
+                if (window.reloadCharts) window.reloadCharts();
+            }, 1000);
+        });
+
+        function showToast(alert) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const sev = (alert.severity || 'high').toLowerCase();
+            toast.className = `toast ${sev}`;
+
+            const emailBadge = alert.email_sent
+                ? '<span class="email-badge">📧 EMAIL SENT</span>' : '';
+
+            const riskClass = alert.risk_score >= 70 ? 'high' : 'medium';
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <div class="toast-title">
+                        🚨 ${alert.severity || 'High'} Risk Alert ${emailBadge}
+                    </div>
+                    <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+                </div>
+                <div class="toast-body">
+                    <div><span class="toast-risk ${riskClass}">Risk: ${alert.risk_score}</span></div>
+                    <div style="margin-top:8px"><strong>User:</strong> ${escapeHtml(alert.username || 'Unknown')}</div>
+                    <div><strong>File:</strong> ${escapeHtml(alert.file_name || 'N/A')}</div>
+                    <div style="margin-top:6px;font-size:.78rem;color:var(--text-muted)">${escapeHtml((alert.reason || '').substring(0, 120))}</div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toastOut .3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 10000);
+        }
+
+        // ─── XSS PROTECTION ───
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ─── SIMULATE ATTACK ───
+        async function simulateAttack() {
+            const btn = document.getElementById('btnSimulate');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Simulating...';
+
+            try {
+                const res = await fetch('/api/simulate', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    btn.innerHTML = '✅ Done!';
+                    // Refresh dashboard data
+                    setTimeout(() => {
+                        if (window.fetchAllData) window.fetchAllData();
+                    }, 1500);
+                } else {
+                    btn.innerHTML = '❌ Error';
+                }
+            } catch (e) {
+                btn.innerHTML = '❌ Failed';
+                console.error('Simulate error:', e);
+            }
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '💀 Simulate Attack';
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

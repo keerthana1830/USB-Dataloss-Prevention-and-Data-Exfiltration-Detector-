@@ -1,0 +1,18 @@
+{
+  "trusted_devices": [
+    {
+      "vendor": "SanDisk",
+      "serial": "4C530001234567890123",
+      "description": "IT Department Approved USB",
+      "added_date": "2024-01-15"
+    },
+    {
+      "vendor": "Kingston",
+      "serial": "60A44C413E85E961",
+      "description": "Executive Team USB Drive",
+      "added_date": "2024-01-20"
+    }
+  ],
+  "whitelist_enabled": true,
+  "unknown_device_penalty": 30
+}
